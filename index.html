@@ -2,71 +2,80 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- aby to nezobrazovalo blbe na mobilu, simon rika ze to je dulezity -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prague Spring 1968 — Interactive Timeline</title>
+<!-- tady jsou jmena nas dvou, snad to ucitel uvidi -->
 <meta name="author" content="Šimon Mičulka, Šimon Stejskal">
 <style>
-  /* Only thing in light DOM: kill any host page margin/padding */
+  /* tohle jsem nekde vygooglil ze kdyz to nemas tak jsou divny mezery všude, nevim proc to funguje ale funguje */
   html, body {
     margin: 0 !important;
     padding: 0 !important;
     background: transparent !important;
   }
+  /* custom element pro celou stranku, simon rikal ze to tak ma byt */
   prague-timeline {
     display: block;
   }
 </style>
 </head>
 <body>
+<!-- sem prijde cely ten komponent, magic -->
 <prague-timeline></prague-timeline>
 
 <script>
 (function() {
+  // CSS je tady jako string protoze to musi byt uvnitr shadow domu
+  // shadow dom = jakej uzavrenej bubble kde se css nemicha s ostatnim, to je aspon co jsem pochopil
   const CSS = String.raw`
-/* ============================================================
-   DESIGN TOKENS
-   ============================================================ */
+
+/* barvy a tak, kdybychom to chteli zmenit tak to meníme jen tady a ne vsude po kodu, to je dobrej napad */
+/* tyhle veci se jmenuji css custom properties nebo taky variables, sikovny */
 :host {
   display: block;
-  --bg:           #f5f4f1;
-  --bg-alt:       #eceae5;
-  --surface:      #ffffff;
-  --surface-2:    #f0ede8;
+  --bg:           #f5f4f1;   /* hlavni pozadi, takovej kremovy */
+  --bg-alt:       #eceae5;   /* trochu tmavsi kremova pro stridat */
+  --surface:      #ffffff;   /* pure white pro karty a tak */
+  --surface-2:    #f0ede8;   /* dalsi stupen, moc barev ale ok */
   --border:       #dbd8d2;
-  --border-strong:#b8b3aa;
-  --text:         #1a1816;
-  --text-2:       #4a4740;
-  --text-3:       #8a857d;
-  --accent:       #b5763a;
-  --accent-bg:    rgba(181,118,58,0.09);
-  --c-before:     #3b6ea8;
+  --border-strong:#b8b3aa;   /* silnejsi border kdyz je treba */
+  --text:         #1a1816;   /* temer cerna, ne uplne cerna protoze cista cerna je moc harsh */
+  --text-2:       #4a4740;   /* seda na mene dulezity text */
+  --text-3:       #8a857d;   /* jeste svetlejsi seda, pouziva se na datumy a takovyhle veci */
+  --accent:       #b5763a;   /* oranzovohneda barva, simon rikal ze to vypada historicky */
+  --accent-bg:    rgba(181,118,58,0.09);  /* pruhledna verze accentu pro pozadi */
+  /* barvy pro kazdy fazovej usek - modra, zelena, cervena */
+  --c-before:     #3b6ea8;   /* modra pro cast pred jarem */
   --c-before-bg:  rgba(59,110,168,0.08);
   --c-before-mid: rgba(59,110,168,0.22);
-  --c-spring:     #3d8c58;
+  --c-spring:     #3d8c58;   /* zelena pro prazske jaro, logicky ne */
   --c-spring-bg:  rgba(61,140,88,0.08);
   --c-spring-mid: rgba(61,140,88,0.22);
-  --c-after:      #b83232;
+  --c-after:      #b83232;   /* cervena pro normalizaci, taky logicky */
   --c-after-bg:   rgba(184,50,50,0.08);
   --c-after-mid:  rgba(184,50,50,0.22);
-  --radius: 8px;
-  --radius-sm: 5px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05);
+  --radius: 8px;       /* zaobleni rohu vsude */
+  --radius-sm: 5px;    /* mensi zaobleni */
+  --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05);  /* jemny stin, vic vrstev = lepsi stin */
 }
 
+/* dark mode!! chteli jsme to mit, vypada cool a neni to tezky */
+/* tohle se aktivuje automaticky kdyz ma uzivatel tmavej rezim v systemu */
 @media (prefers-color-scheme: dark) {
   :host {
     --bg:           #202020;
-    --bg-alt:       #191919;
+    --bg-alt:       #191919;   /* temer cerna */
     --surface:      #2a2a2a;
     --surface-2:    #323232;
     --border:       #3a3a3a;
     --border-strong:#505050;
-    --text:         #f0ece6;
+    --text:         #f0ece6;   /* svetla barva textu */
     --text-2:       #a8a39c;
     --text-3:       #666260;
-    --accent:       #d4904a;
+    --accent:       #d4904a;   /* svetlejsi oranzova pro dark mode */
     --accent-bg:    rgba(212,144,74,0.1);
-    --c-before:     #6090d0;
+    --c-before:     #6090d0;   /* svetlejsi modra */
     --c-before-bg:  rgba(96,144,208,0.1);
     --c-before-mid: rgba(96,144,208,0.2);
     --c-spring:     #55b070;
@@ -75,71 +84,81 @@
     --c-after:      #d85050;
     --c-after-bg:   rgba(216,80,80,0.1);
     --c-after-mid:  rgba(216,80,80,0.2);
-    --shadow: 0 1px 4px rgba(0,0,0,0.4), 0 4px 14px rgba(0,0,0,0.25);
+    --shadow: 0 1px 4px rgba(0,0,0,0.4), 0 4px 14px rgba(0,0,0,0.25);  /* tmavsí stiny pro dark mode */
   }
 }
 
-/* ============================================================
-   BASE
-   ============================================================ */
+/* reset - tohle je standartni vec, vypne defaultni styly browseru ktere jsou vzdy otravny jak pica */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* hlavni obal cely stranky */
 .shadow-root-wrap {
   font-size: 16px;
   background: var(--bg);
   color: var(--text);
+  /* inter je moderni font, libre baskerville pouzivame na nadpisy - vypada historicky */
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 400;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
+  line-height: 1.6;  /* radkovani, 1.6 je prijemny na cteni */
+  -webkit-font-smoothing: antialiased;  /* vyhlazovani pisma na mac, na windows to nedelal nic */
+  min-height: 100vh;  /* aspon cela vyska obrazovky */
 }
 
-/* ============================================================
-   HEADER
-   ============================================================ */
+/* HLAVICKA - ta velka cast nahore s "1968" na pozadi */
 header {
   background: var(--bg-alt);
   border-bottom: 1px solid var(--border);
+  /* clamp je fakt uzitecna vec - min, preferovana hodnota, max */
+  /* takze padding se prizpusobuje velikosti obrazovky automaticky, nemusime psat media queries pro vsechno */
   padding: clamp(52px, 9vw, 100px) 20px clamp(44px, 7vw, 80px);
   text-align: center;
-  position: relative;
-  overflow: hidden;
+  position: relative;  /* kvuli tomu "1968" na pozadi ktere je absolutne pozicovane */
+  overflow: hidden;    /* at to "1968" nevyteka ven */
 }
+
+/* tohle je ten velky "1968" text na pozadi hlavicky, je to pseudoelement takze neni v HTML */
+/* vyuzili jsme ::after protoze ::before uz pouziva neco jineho, nebo tak nejak, uz si nepamatuju */
 header::after {
   content: '1968';
   position: absolute;
   font-family: 'Libre Baskerville', serif;
-  font-size: clamp(110px, 26vw, 290px);
+  font-size: clamp(110px, 26vw, 290px);  /* obrovskej font ktery se scaluje */
   font-weight: 700;
-  color: var(--border);
+  color: var(--border);   /* stejná barva jako border = skoro neviditelny, to je ten efekt */
   top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  letter-spacing: -8px;
-  pointer-events: none;
-  user-select: none;
+  transform: translate(-50%, -50%);  /* klasicky trik na centrovani absolutniho elementu */
+  letter-spacing: -8px;   /* zmenšit mezery mezi pismenama, vypada lip */
+  pointer-events: none;   /* at nejde klikat na ten text, je to jen dekorace */
+  user-select: none;      /* at nejde oznacit ten text, bylo by to divny */
   opacity: 0.5;
 }
+
+/* maly nadpisek nad hlavnim nazvem */
 .header-eyebrow {
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 3.5px;
+  letter-spacing: 3.5px;   /* hodne mezer mezi pismenama = vypadá profesionalne nebo tak */
   text-transform: uppercase;
   color: var(--text-3);
   margin-bottom: 18px;
   position: relative;
-  z-index: 1;
+  z-index: 1;  /* at je nad tim "1968" na pozadi */
 }
+
+/* VELKY NADPIS "Prague Spring" */
 h1 {
-  font-family: 'Libre Baskerville', serif;
-  font-size: clamp(52px, 12vw, 108px);
+  font-family: 'Libre Baskerville', serif;  /* serifovej font pro historicky nador */
+  font-size: clamp(52px, 12vw, 108px);      /* responsivni velikost */
   font-weight: 700;
   color: var(--text);
-  line-height: 0.9;
-  letter-spacing: -2px;
+  line-height: 0.9;       /* radky bliz k sobe nez normalne, pro nadpisy se to dela */
+  letter-spacing: -2px;   /* trochu zmacknout pismena k sobe */
   position: relative;
   z-index: 1;
 }
+/* "Spring" je kurzivou a zelenou barvou - to je ten em tag v html */
 h1 em { font-style: italic; color: var(--c-spring); }
+
 .header-sub {
   margin-top: 22px;
   font-size: 13px;
@@ -148,24 +167,25 @@ h1 em { font-style: italic; color: var(--c-spring); }
   z-index: 1;
 }
 
-/* ============================================================
-   STICKY NAV
-   ============================================================ */
+/* NAVIGACE NAHORE - ta lepiva lista s tlacitky fazi */
+/* sticky = zustane nahore kdyz scrollujes, to je ta "lipici" vlastnost */
 .phase-nav {
   position: sticky;
-  top: 0;
-  z-index: 100;
+  top: 0;         /* lepit na vrchol */
+  z-index: 100;   /* at je nad vsim ostatnim */
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: center;
 }
+
+/* jednotliva tlacitka v navigaci */
 .phase-btn {
-  flex: 1;
-  max-width: 240px;
+  flex: 1;           /* rovnomerne rozdelit misto */
+  max-width: 240px;  /* ale ne moc siroky */
   padding: 13px 10px 11px;
   border: none;
-  border-bottom: 3px solid transparent;
+  border-bottom: 3px solid transparent;  /* placeholder pro aktivni podtrzeni */
   background: transparent;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
@@ -174,38 +194,40 @@ h1 em { font-style: italic; color: var(--c-spring); }
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--text-3);
+  /* plynule prechody pri hoveru a kliknuti */
   transition: color 0.2s, border-color 0.2s, background 0.2s;
   line-height: 1.4;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color: transparent;  /* vypnout modrej highlight na mobile pri kliknuti, otravny */
 }
 .phase-btn:hover { color: var(--text-2); background: var(--bg-alt); }
+
+/* maly text pod nazvem tlacitka */
 .phase-btn .btn-sub { display: block; font-size: 9px; font-weight: 400; letter-spacing: 0.8px; opacity: 0.6; margin-top: 2px; }
+
+/* aktivni stav pro kazde tlacitko ma svoji barvu */
 .phase-btn.before.active { color: var(--c-before); border-bottom-color: var(--c-before); background: var(--c-before-bg); }
 .phase-btn.spring.active { color: var(--c-spring); border-bottom-color: var(--c-spring); background: var(--c-spring-bg); }
 .phase-btn.after.active  { color: var(--c-after);  border-bottom-color: var(--c-after);  background: var(--c-after-bg);  }
 
-/* ============================================================
-   PAGE WRAP
-   ============================================================ */
+/* obal obsahu, max sirka aby to nebylo moc siroky na velkych monitorech */
 .page-wrap {
   max-width: 760px;
-  margin: 0 auto;
+  margin: 0 auto;   /* centrovani */
   padding: 0 16px;
 }
 
-/* ============================================================
-   STATS BAR
-   ============================================================ */
+/* STATISTIKY - ta mrizka cisel nahore */
 .stats-bar {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
+  grid-template-columns: repeat(3, 1fr);  /* 3 sloupce na mobilu */
+  gap: 1px;            /* mezera je 1px a pozadi je border barva = vypada jako tenka mrizka */
   background: var(--border);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
   margin: 36px 0 44px;
 }
+/* na vetsich obrazovkach 6 sloupcu vedle sebe */
 @media (min-width: 580px) {
   .stats-bar { grid-template-columns: repeat(6, 1fr); }
 }
@@ -215,18 +237,19 @@ h1 em { font-style: italic; color: var(--c-spring); }
   text-align: center;
   transition: background 0.15s;
 }
-.stat-item:hover { background: var(--surface-2); }
+.stat-item:hover { background: var(--surface-2); }  /* jemny hover efekt */
+
 .stat-number {
   display: block;
   font-family: 'Libre Baskerville', serif;
   font-size: clamp(16px, 3vw, 24px);
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent);   /* cisla jsou oranzova */
   line-height: 1.15;
 }
 .stat-label {
   display: block;
-  font-size: 8px;
+  font-size: 8px;   /* fakt maly text pod cislem */
   font-weight: 600;
   letter-spacing: 0.8px;
   text-transform: uppercase;
@@ -235,12 +258,12 @@ h1 em { font-style: italic; color: var(--c-spring); }
   line-height: 1.3;
 }
 
-/* ============================================================
-   PHASE SECTION
-   ============================================================ */
+/* SEKCE JEDNOTLIVYCH FAZI */
+/* vsechny jsou skryte, jen ta aktivni je videt - prepina se javascriptem */
 .phase-section { display: none; animation: fadeIn 0.3s ease; }
 .phase-section.active { display: block; }
 
+/* hlavicka kazde faze - ten barevnej box s rimskyma cislicema */
 .phase-header {
   display: flex;
   align-items: center;
@@ -250,17 +273,19 @@ h1 em { font-style: italic; color: var(--c-spring); }
   margin-bottom: 24px;
   border: 1px solid transparent;
 }
+/* kazda faze ma svoji barvu pozadi */
 .before .phase-header { background: var(--c-before-bg); border-color: var(--c-before-mid); }
 .spring .phase-header { background: var(--c-spring-bg); border-color: var(--c-spring-mid); }
 .after  .phase-header { background: var(--c-after-bg);  border-color: var(--c-after-mid);  }
 
+/* ta velka polopruhledna rimska cislice vlevo */
 .phase-numeral {
   font-family: 'Libre Baskerville', serif;
   font-size: 42px;
   font-weight: 700;
   line-height: 1;
-  flex-shrink: 0;
-  opacity: 0.2;
+  flex-shrink: 0;   /* at se nezmensi kdyz je malo mista */
+  opacity: 0.2;     /* polopruhledna = dekorativni efekt */
 }
 .before .phase-numeral { color: var(--c-before); }
 .spring .phase-numeral { color: var(--c-spring); }
@@ -282,14 +307,13 @@ h1 em { font-style: italic; color: var(--c-spring); }
   text-transform: uppercase;
 }
 
-/* ============================================================
-   EVENTS
-   ============================================================ */
+/* SEZNAM UDALOSTI - ta casova osa vlevo */
 .events-list {
   position: relative;
-  padding-left: 26px;
+  padding-left: 26px;   /* misto pro tu vertikalni caru vlevo */
   margin-bottom: 36px;
 }
+/* ta vertikalni cara - je to pseudoelement ne skutecny element, chytry */
 .events-list::before {
   content: '';
   position: absolute;
@@ -298,35 +322,40 @@ h1 em { font-style: italic; color: var(--c-spring); }
   background: var(--border);
 }
 
+/* jedna udalost v seznamu */
 .event-item {
   position: relative;
   margin-bottom: 3px;
-  cursor: pointer;
+  cursor: pointer;   /* rucicka pri hoveru, naznacuje ze se da kliknout */
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   padding: 13px 14px 11px;
   transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
   -webkit-tap-highlight-color: transparent;
 }
+/* ten kolecko na casove ose - taky pseudoelement */
 .event-item::before {
   content: '';
   position: absolute;
-  left: -21px; top: 18px;
+  left: -21px; top: 18px;   /* umisteni na caru */
   width: 8px; height: 8px;
-  border-radius: 50%;
+  border-radius: 50%;   /* kruh */
   background: var(--border-strong);
-  border: 2px solid var(--bg);
+  border: 2px solid var(--bg);   /* bile okraje kolem kolecka = vypada jako na care */
   transition: all 0.2s;
 }
+/* barva kolecka podle faze */
 .before-phase .event-item::before { background: var(--c-before-mid); }
 .spring-phase .event-item::before { background: var(--c-spring-mid); }
 .after-phase  .event-item::before { background: var(--c-after-mid);  }
 
+/* hover a otevreny stav - udalost se "vyskoči" */
 .event-item:hover, .event-item.open {
   background: var(--surface);
   border-color: var(--border);
   box-shadow: var(--shadow);
 }
+/* kolecko se rozsviti a dostane glow efekt */
 .before-phase .event-item:hover::before, .before-phase .event-item.open::before
   { background: var(--c-before); box-shadow: 0 0 0 3px var(--c-before-bg); }
 .spring-phase .event-item:hover::before, .spring-phase .event-item.open::before
@@ -334,6 +363,7 @@ h1 em { font-style: italic; color: var(--c-spring); }
 .after-phase  .event-item:hover::before, .after-phase  .event-item.open::before
   { background: var(--c-after);  box-shadow: 0 0 0 3px var(--c-after-bg);  }
 
+/* radek s datumem, nazvem a tlacitkem + */
 .event-row {
   display: flex;
   align-items: flex-start;
@@ -345,11 +375,12 @@ h1 em { font-style: italic; color: var(--c-spring); }
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: var(--text-3);
-  white-space: nowrap;
+  white-space: nowrap;   /* datum se nezalomi */
   padding-top: 3px;
   flex-shrink: 0;
   transition: color 0.2s;
 }
+/* datum zmeni barvu pri hoveru podle faze */
 .before-phase .event-item:hover .event-date, .before-phase .event-item.open .event-date { color: var(--c-before); }
 .spring-phase .event-item:hover .event-date, .spring-phase .event-item.open .event-date { color: var(--c-spring); }
 .after-phase  .event-item:hover .event-date, .after-phase  .event-item.open .event-date { color: var(--c-after);  }
@@ -360,13 +391,15 @@ h1 em { font-style: italic; color: var(--c-spring); }
   font-weight: 400;
   color: var(--text);
   line-height: 1.35;
-  flex: 1;
+  flex: 1;   /* zabere zbytek mista */
   transition: color 0.2s;
 }
+/* nazev taky zmeni barvu */
 .before-phase .event-item:hover .event-title { color: var(--c-before); }
 .spring-phase .event-item:hover .event-title { color: var(--c-spring); }
 .after-phase  .event-item:hover .event-title { color: var(--c-after);  }
 
+/* to kolecko s pluskem vpravo */
 .toggle-btn {
   width: 22px; height: 22px;
   border-radius: 50%;
@@ -378,27 +411,35 @@ h1 em { font-style: italic; color: var(--c-spring); }
   color: var(--text-3);
   transition: all 0.25s;
 }
+/* kdyz je otevreny - plusko se otoci na krizek (+ otoceny o 45 stupnu = x) a zmeni barvu */
 .event-item.open .toggle-btn { transform: rotate(45deg); color: #fff; border-color: transparent; }
 .before-phase .event-item.open .toggle-btn { background: var(--c-before); }
 .spring-phase .event-item.open .toggle-btn { background: var(--c-spring); }
 .after-phase  .event-item.open .toggle-btn { background: var(--c-after);  }
 
+/* kratky popis pod nazvem - videt vzdy */
 .event-teaser {
   font-size: 12px;
   color: var(--text-3);
   line-height: 1.55;
   margin-top: 5px;
-  padding-right: 32px;
+  padding-right: 32px;   /* misto pro to tlacitko vpravo */
 }
 
+/* DETAIL UDALOSTI - skryty obsah ktery se rozbaluje */
+/* pouzivame max-height trik misto display:none protoze to lze animovat */
+/* display none nejde animovat, max-height ano - i kdyz je to trochu hack */
 .event-detail {
   max-height: 0;
   overflow: hidden;
   opacity: 0;
   transition: max-height 0.45s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease;
 }
+/* kdyz je otevreny - velka max-height aby se veslo vse */
+/* 900px by melo byt dost, kdybychom dali moc tak by to trvalo dlouho otevrit */
 .event-item.open .event-detail { max-height: 900px; opacity: 1; }
 
+/* box s detailnim textem */
 .event-body {
   margin-top: 12px;
   padding: 14px 16px;
@@ -407,13 +448,15 @@ h1 em { font-style: italic; color: var(--c-spring); }
   font-size: 13px;
   line-height: 1.8;
   color: var(--text-2);
-  border-left: 3px solid var(--border-strong);
+  border-left: 3px solid var(--border-strong);   /* barevna cara vlevo */
 }
+/* cara vlevo zmeni barvu podle faze */
 .before-phase .event-item.open .event-body { border-left-color: var(--c-before); }
 .spring-phase .event-item.open .event-body { border-left-color: var(--c-spring); }
 .after-phase  .event-item.open .event-body { border-left-color: var(--c-after);  }
 .event-body strong { color: var(--text); font-weight: 600; }
 
+/* citaty v textu - kurziva s oranzovou carou vlevo */
 .quote {
   font-family: 'Libre Baskerville', serif;
   font-style: italic;
@@ -425,15 +468,13 @@ h1 em { font-style: italic; color: var(--c-spring); }
   line-height: 1.65;
 }
 
-
-/* ============================================================
-   SOURCES
-   ============================================================ */
+/* ZDROJE DOLE */
 .sources-wrap {
   max-width: 760px;
   margin: 0 auto;
   padding: 0 16px 56px;
 }
+/* tlacitko pro rozbaleni zdroju */
 .sources-btn {
   display: flex;
   align-items: center;
@@ -454,35 +495,39 @@ h1 em { font-style: italic; color: var(--c-spring); }
   -webkit-tap-highlight-color: transparent;
 }
 .sources-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+/* kdyz je otevreny - spodni rohy se narovnaji protoze navazuje na grid se zdroji */
 .sources-btn.open  { border-color: var(--accent); color: var(--accent); background: var(--accent-bg);
                      border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom-color: transparent; }
+/* kolecko s pluskem vpravo - stejny princip jako u udalosti */
 .sources-icon {
   width: 22px; height: 22px;
   border-radius: 50%;
-  border: 1.5px solid currentColor;
+  border: 1.5px solid currentColor;   /* currentColor = zdedi barvu od rodice, pekny */
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; font-weight: 300;
   transition: transform 0.3s;
   flex-shrink: 0;
 }
-.sources-btn.open .sources-icon { transform: rotate(45deg); }
+.sources-btn.open .sources-icon { transform: rotate(45deg); }  /* + -> x */
 
+/* stejny max-height trik jako u detailu udalosti */
 .sources-body { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.5s ease, opacity 0.4s ease; }
-.sources-body.open { max-height: 1400px; opacity: 1; }
+.sources-body.open { max-height: 1400px; opacity: 1; }  /* 1400 protoze vic zdroju = vic obsahu */
 
+/* mrizka karet se zdroji */
 .sources-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr;   /* 1 sloupec na mobilu */
   gap: 1px;
   background: var(--border);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--accent);   /* oranzovej border aby to navazovalo na tlacitko */
   border-top: none;
   border-bottom-left-radius: var(--radius);
   border-bottom-right-radius: var(--radius);
   overflow: hidden;
 }
-@media (min-width: 500px) { .sources-grid { grid-template-columns: 1fr 1fr; } }
-@media (min-width: 720px) { .sources-grid { grid-template-columns: 1fr 1fr 1fr; } }
+@media (min-width: 500px) { .sources-grid { grid-template-columns: 1fr 1fr; } }        /* 2 sloupce */
+@media (min-width: 720px) { .sources-grid { grid-template-columns: 1fr 1fr 1fr; } }    /* 3 sloupce */
 
 .source-card { background: var(--surface); padding: 15px 17px; transition: background 0.15s; }
 .source-card:hover { background: var(--surface-2); }
@@ -492,9 +537,7 @@ h1 em { font-style: italic; color: var(--c-spring); }
 .source-info a { color: var(--text-3); text-decoration: none; border-bottom: 1px solid var(--border-strong); transition: color 0.15s, border-color 0.15s; }
 .source-info a:hover { color: var(--accent); border-bottom-color: var(--accent); }
 
-/* ============================================================
-   FOOTER
-   ============================================================ */
+/* PATICKA */
 footer {
   background: var(--bg-alt);
   border-top: 1px solid var(--border);
@@ -506,19 +549,20 @@ footer {
   color: var(--text-3);
   line-height: 2;
 }
-footer .authors { color: var(--text-2); }
+footer .authors { color: var(--text-2); }   /* nase jmena o neco svetlejsi */
 
-/* ============================================================
-   ANIMATIONS & RESPONSIVE
-   ============================================================ */
+/* animace pri prepinani fazi - jemnej fade in */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
+/* na malych telefonech trochu zmensit padding at se to vejs */
 @media (max-width: 420px) {
   .phase-btn { padding: 11px 6px 9px; font-size: 9px; letter-spacing: 0.8px; }
   .event-teaser { padding-right: 0; }
 }
 `;
 
+  // HTML obsah komponenty
+  // tady je cely obsah stranky jako string, pak se to vlozi do shadow domu
   const HTML = String.raw`<header>
   <div class="header-eyebrow">Czech &amp; Slovak History</div>
   <h1>Prague<br><em>Spring</em></h1>
@@ -542,6 +586,7 @@ footer .authors { color: var(--text-2); }
 
 <div class="page-wrap">
 
+  <!-- cisla nahore, zajimava fakta o invazi -->
   <div class="stats-bar">
     <div class="stat-item"><span class="stat-number">500,000</span><span class="stat-label">Invading Troops</span></div>
     <div class="stat-item"><span class="stat-number">6,300</span><span class="stat-label">Tanks Deployed</span></div>
@@ -551,7 +596,7 @@ footer .authors { color: var(--text-2); }
     <div class="stat-item"><span class="stat-number">8 mo.</span><span class="stat-label">The Spring Lasted</span></div>
   </div>
 
-  <!-- PHASE 1 -->
+  <!-- FAZE 1 - pred jarem -->
   <div class="phase-section before active" id="phase-before">
     <div class="phase-header before">
       <div class="phase-numeral">I.</div>
@@ -621,7 +666,7 @@ footer .authors { color: var(--text-2); }
     </div>
   </div>
 
-  <!-- PHASE 2 -->
+  <!-- FAZE 2 - prazske jaro, ta hlavni cast -->
   <div class="phase-section spring" id="phase-spring">
     <div class="phase-header spring">
       <div class="phase-numeral">II.</div>
@@ -699,7 +744,7 @@ footer .authors { color: var(--text-2); }
     </div>
   </div>
 
-  <!-- PHASE 3 -->
+  <!-- FAZE 3 - normalizace, to smutny obdobi -->
   <div class="phase-section after" id="phase-after">
     <div class="phase-header after">
       <div class="phase-numeral">III.</div>
@@ -789,7 +834,7 @@ footer .authors { color: var(--text-2); }
 
 </div>
 
-<!-- SOURCES -->
+<!-- zdroje - ucitel chtel at mame zdroje tak tady jsou -->
 <div class="sources-wrap">
   <button class="sources-btn">
     <span>Sources &amp; Further Reading</span>
@@ -812,66 +857,82 @@ footer .authors { color: var(--text-2); }
 
 <footer>
   Prague Spring 1968 — Interactive Timeline<br>
+  <!-- nase jmena, dulezity! -->
   <span class="authors">Created by Šimon Mičulka &amp; Šimon Stejskal</span>
 </footer>`;
 
+  // tady se registruje ten custom element, prague-timeline tag
+  // HTMLElement je zakladni trida pro vsechny html elementy
   class PragueTimeline extends HTMLElement {
     connectedCallback() {
+      // shadow dom = izolovanej prostor pro nas komponent
+      // mode open znamena ze se k nemu da dostat zvenku js, closed by to zakazal
       const shadow = this.attachShadow({ mode: 'open' });
 
-      // Google Fonts link (must be in shadow root for it to load)
+      // fonty musej byt v shadow domu jinak je browser nenacte
+      // tohle mi trvalo hodinu nez jsem prijil na proc to nefunguje
       const fontLink = document.createElement('link');
       fontLink.rel = 'stylesheet';
       fontLink.href = 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap';
       shadow.appendChild(fontLink);
 
+      // vlozime css
       const style = document.createElement('style');
       style.textContent = CSS;
       shadow.appendChild(style);
 
+      // vlozime html obsah
       const wrapper = document.createElement('div');
       wrapper.className = 'shadow-root-wrap';
       wrapper.innerHTML = HTML;
       shadow.appendChild(wrapper);
 
-      // Wire up JS — scoped to shadow root
+      // zkratka pro hledani prvku v shadow domu
       const root = shadow;
 
-      // Phase nav buttons
+      // prepinani fazi - kliknes na tlacitko, schova se aktivni sekce a ukaze nova
       root.querySelectorAll('.phase-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+          // zjistime ktere tlacitko bylo kliknuto
           const phase = btn.classList.contains('before') ? 'before'
                       : btn.classList.contains('spring') ? 'spring' : 'after';
+          // schovat vsechny sekce
           root.querySelectorAll('.phase-section').forEach(el => el.classList.remove('active'));
+          // odznacit vsechna tlacitka
           root.querySelectorAll('.phase-btn').forEach(el => el.classList.remove('active'));
+          // zobrazit spravnou sekci a oznacit spravne tlacitko
           root.querySelector('#phase-' + phase).classList.add('active');
           btn.classList.add('active');
         });
       });
 
-      // Event items
+      // rozklikavaci udalosti
       root.querySelectorAll('.event-item').forEach(item => {
-        item.removeAttribute('onclick');
+        item.removeAttribute('onclick');  // pro jistotu smazat onclick atributy kdybychom nejake meli
         item.addEventListener('click', () => {
           const isOpen = item.classList.contains('open');
+          // zavrit vsechny ostatni udalosti ve stejnym seznamu
           item.closest('.events-list').querySelectorAll('.event-item').forEach(e => e.classList.remove('open'));
+          // pokud nebyla otevrena tak ji otevrit, pokud uz byla otevrena tak zustane zavrena
           if (!isOpen) item.classList.add('open');
         });
       });
 
-      // Sources toggle
+      // tlacitko pro zdroje
       const sourcesBtn = root.querySelector('.sources-btn');
       if (sourcesBtn) {
         sourcesBtn.removeAttribute('onclick');
         sourcesBtn.addEventListener('click', () => {
           const body = root.querySelector('#sources-body');
-          const open = body.classList.toggle('open');
+          const open = body.classList.toggle('open');   // toggle = prepne true/false
           sourcesBtn.classList.toggle('open', open);
         });
       }
     }
   }
 
+  // zaregistrovat nas custom element pod nazvem prague-timeline
+  // po tomto radku uz browser vi co ma delat kdyz narazi na <prague-timeline> v html
   customElements.define('prague-timeline', PragueTimeline);
 })();
 </script>
